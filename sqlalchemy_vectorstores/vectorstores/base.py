@@ -12,7 +12,7 @@ from sqlalchemy_vectorstores.vectorstores.utils import _select_first_to_dict
 class BaseVectorStore(abc.ABC):
     '''
     a simple vector store that support:
-        - CRUD of document tables
+        - CRUD of documents
         - search documents by vector with filters
         - search documents by bm25 with filters
     '''

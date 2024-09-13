@@ -76,8 +76,6 @@ class AsyncVectorDatabase(abc.ABC):
             await con.run_sync(table.create, checkfirst=True)
         return table
 
-
-
     @abc.abstractmethod
     async def create_fts_table(
         self,

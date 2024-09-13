@@ -118,6 +118,21 @@ class PostgresDatabase(VectorDatabase):
         type: t.Literal["id", "text", "list_any", "list_all", "dict"] = "text",
         json_key: str = "",
     ) -> sa.sql._typing.ColumnExpressionArgument:
+        """
+        helper method to build sqlalchemy filter expressions.
+
+        Args:
+            column (sa.Column): the Column used to filter
+            value (t.Any): filter by value
+            type : filter type. Defaults to "text".
+                    id: sa.Column==value
+                    text: sa.Column.ilike(value)
+                    list_any: sa.or_(sa.Column.contains(x) for x in value)
+                    list_all: sa.and_(sa.Column.contains(x) for x in value)
+                    dict: for metadata, sa.Column[json_key] [==, ilike] value
+        Returns:
+            sa.sql._typing.ColumnExpressionArgument
+        """
         if type == "dict":
             if isinstance(value, str):
                 return (column[json_key].as_string().ilike(value))

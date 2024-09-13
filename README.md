@@ -141,7 +141,7 @@ The `*Database` classes manage database initialization such as create tables, lo
 The `*VectorStore` classes manage document CRUD and search.
 
 # Todo
-- [ ] add prebuilt sqlite fts tokenizer using jieba to suuport chinese bm25 search.
+- [ ] add prebuilt sqlite fts tokenizer using jieba to support chinese bm25 search.
 - [ ] support customized tokenizer for postgres
 
 ## Changelog

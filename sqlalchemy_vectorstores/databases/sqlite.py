@@ -185,6 +185,21 @@ class SqliteDatabase(VectorDatabase):
         type: t.Literal["id", "text", "list_any", "list_all", "dict"] = "text",
         json_path: str = "",
     ) -> sa.sql._typing.ColumnExpressionArgument:
+        """
+        helper method to build sqlalchemy filter expressions.
+
+        Args:
+            column (sa.Column): the Column used to filter
+            value (t.Any): filter by value
+            type : filter type. Defaults to "text".
+                    id: sa.Column==value
+                    text: sa.Column.ilike(value)
+                    list_any: sa.or_(sa.Column.contains(x) for x in value)
+                    list_all: sa.and_(sa.Column.contains(x) for x in value)
+                    dict: for metadata, "json_extract(sa.Column, json_path) [==, ilike] value
+        Returns:
+            sa.sql._typing.ColumnExpressionArgument
+        """
         if type == "dict":
             if isinstance(value, str):
                 return (sa.func.json_extract(column, json_path).ilike(value))
