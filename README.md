@@ -12,6 +12,21 @@ A vectorstore supports vector & bm25 search using sqlite or postgresql as backen
 - Support sync & async methods
 - Minimal dependencies, all results are builtin List & Dict
 
+## Install
+```shell
+# use sync sqlite
+$ pip install sqlalchemy-vectorsotres[sqlite]
+
+# use async sqlite
+# $ pip install sqlalchemy-vectorsotres[asqlite]
+
+# use postgres either sync or async
+# $ pip install sqlalchemy-vectorsotres[postgres]
+```
+Please attention:
+1. sqlite-vec 0.1.1 not work on windows, need to install `>=0.1.2.alpha9`
+2. postgres use the `psycopg` driver, not `psycopg2`
+
 ## Usage
 Here is an example using sync sqlite:
 ```python3

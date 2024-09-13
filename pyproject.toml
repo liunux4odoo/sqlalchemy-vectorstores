@@ -7,7 +7,13 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
+sqlalchemy = "^2.0"
+sqlalchemy-utils = "^0.41.2"
 
+[tool.poetry.extras]
+sqlite = ["sqlite-vec", "sqlitefts"]
+asqlite = ["sqlite-vec", "sqlitefts", "aiosqlite"]
+postgres = ["pgvector", "psycopg"]
 
 [build-system]
 requires = ["poetry-core"]
