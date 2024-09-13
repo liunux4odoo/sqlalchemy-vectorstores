@@ -120,8 +120,8 @@ print(r)
 Go [here](tests) for more examples.
 
 ## Concepts
-The vectore stores informations in 4 tables:
-- All files from local dist or network are stored in a file source table with columns:
+The vectorestore stores informations in 4 tables:
+- All files from local disk or network are stored in a file source table with columns:
   - id, url, tags, metadata
 - Splitted documents are stored in document table:
   - id, content, metadata. Same to langchain Document
@@ -131,11 +131,11 @@ The vectore stores informations in 4 tables:
 - Cut Words are stored in FTS or TSVECTOR table
 - Embeddings are stored in vector table
 
-All functions are provided by 4 classes:
+All functions are provided by 4 class pairs:
 |              |Sqlite + Sqlite-vec + Sqlite-fts|Postgres + Pgvector  |
 |--------------|--------------------------------|---------------------|
-|Sync Database |SqliteDatabase                  |PostgresDatabase     |
-|Async Database|AsyncSqliteDatabase             |AsyncPostgresDatabase|
+|Sync|SqliteDatabase<br>SqliteVectorStore|PostgresDatabase<br>PostgresVectorStore|
+|Async|AsyncSqliteDatabase<br>AsyncSqliteVectorStore|AsyncPostgresDatabase<br>AsyncPostgresVectorStore|
 
 The `*Database` classes manage database initialization such as create tables, load extensions.
 The `*VectorStore` classes manage document CRUD and search.
