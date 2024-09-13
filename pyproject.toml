@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "sqlalchemy-vectorstores"
+version = "0.1.0"
+description = "a vectorstore supports vector & bm25 search using sqlite or postgresql"
+authors = ["liunux4odoo <liunux@qq.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
