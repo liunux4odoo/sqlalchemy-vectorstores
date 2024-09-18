@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from sqlalchemy_utils import ScalarListType
 
 
-class AsyncVectorDatabase(abc.ABC):
+class AsyncBaseDatabase(abc.ABC):
     '''
     manage table creation and connection in database
     '''
@@ -36,10 +36,24 @@ class AsyncVectorDatabase(abc.ABC):
     def connect(self) -> AsyncConnection:
         return self.engine.begin()
 
-    async def drop_table(self, table_name: str):
+    async def drop_tables(self, *table_names: str):
         async with self.connect() as con:
-            await con.execute(sa.text(f"drop table if exists {table_name}"))
+            for table_name in table_names:
+                await con.execute(sa.text(f"drop table if exists {table_name}"))
+                if table := self.tables.get(table_name):
+                    self.metadata.remove(table)
             await con.commit()
+
+    async def delete_by_ids(self, table: str | sa.Table, ids: str | int | t.List[str | int], id_name: str = "id") -> int:
+        if isinstance(ids, (int, str)):
+            ids = [ids]
+        async with self.connect() as con:
+            if isinstance(table, str):
+                table = self.tables[table]
+            c = getattr(table.c, id_name)
+            res = await con.execute(sa.delete(table).where(c.in_(ids)))
+            await con.commit()
+            return res.rowcount
 
     async def create_src_table(self, table_name: str) -> sa.Table:
         '''
@@ -99,6 +113,20 @@ class AsyncVectorDatabase(abc.ABC):
         table for vector search
         '''
         ...
+
+    async def create_words_table(self, table_name: str):
+        table = sa.Table(
+            table_name,
+            self.metadata,
+            sa.Column("word", sa.String(100), primary_key=True),
+            sa.Column("freq", sa.Integer),
+            sa.Column("tag", sa.String(10)),
+            sa.Column("metadata", sa.JSON),
+            sa.Column("status", sa.Integer), # null: not used; 0: stop word, 1: user dict
+        )
+        async with self.connect() as con:
+            await con.run_sync(table.create, checkfirst=True)
+        return table
 
     @abc.abstractmethod
     def make_filter(

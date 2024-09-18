@@ -20,9 +20,7 @@ async def embed_func(text: str) -> list[float]:
     )).data[0].embedding
 
 db = AsyncPostgresDatabase(DB_URL, echo=False)
-for table in ["rag_src", "rag_doc", "rag_fts", "rag_vec"]:
-    asyncio.run(db.drop_table(table))
-vs = AsyncPostgresVectorStore(db, dim=1024, embedding_func=embed_func)
+vs = AsyncPostgresVectorStore(db, dim=1024, embedding_func=embed_func, clear_existed=True)
 
 query = "Alaqua Cox"
 sentences1 = [

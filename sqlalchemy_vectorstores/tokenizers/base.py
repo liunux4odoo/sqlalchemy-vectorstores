@@ -1,59 +1,53 @@
 from __future__ import annotations
 
 import abc
-from functools import lru_cache
-import io
-import re
 import typing as t
 
-import jieba
-from sqlitefts import fts5
 
-
-class BaseTokenize(abc.ABC): # TODO: uncompleted
-    ...
-
-
-@lru_cache(1)
-def get_stop_words() -> t.List[str]:
-    return []
-
-
-def get_user_dict() -> t.List[str]:
-    return []
-
-
-def init_jieba():
-    fp = io.StringIO()
-    fp.write("\n".join(get_user_dict()))
-    fp.seek(0)
-    jieba.load_userdict(fp)
-    fp.close()
-
-
-def cut_words(text: str) -> t.Generator[t.Tuple[str, int, int], None, None]:
+class BaseTokenize(abc.ABC):
     '''
-    jieba 分词
+    An unit class to cut text to fts tokens for sqlite & postgres
     '''
-    stop_words = get_stop_words()
-    patterns = [re.compile(r"\s+")]
-    for word in jieba.cut_for_search(text):
-        skip = False
-        if word in stop_words:
-            skip = True
-        for p in patterns:
-            if p.findall(word):
-                skip = True
-                break
-        if skip:
-            continue
+    def __init__(self, stop_words: t.List[str]=[], user_dict: t.List[t.Dict]=[]) -> None:
+        self._sqlite_tokenize = None
+        self._pg_tokenize = None
+        self._stop_words = stop_words
+        self._user_dict = user_dict
 
-        s = text.find(word)
-        p = len(text[:s].encode())
-        l = len(word.encode())
-        yield word.lower(), p, l
+    def load_stop_words(self) -> t.List[str]:
+        return self._stop_words
+    
+    def load_user_dict(self) -> t.List[t.Dict]:
+        return self._user_dict
 
+    @abc.abstractmethod
+    def cut_words(self, text: str) -> t.Generator[t.Tuple[str, int, int], None, None]:
+        '''
+        cut sentence to words, the return value must be: (word, start_pos, end_pos)
+        '''
+        ...
 
-class JiebaTokenize(fts5.FTS5Tokenizer):
-    def tokenize(self, text, flags=None):
-        return cut_words(text)
+    def as_sqlite_tokenize(self):
+        if self._sqlite_tokenize is None:
+            from sqlitefts import fts5
+            class CustomTokenize(fts5.FTS5Tokenizer):
+                def tokenize(that, text, flags=None):
+                    for t,s,e in self.cut_words(text):
+                        s = len(text[:s].encode("utf-8"))
+                        e = s + len(t.encode("utf-8"))
+                        yield t, s, e
+            self._sqlite_tokenize = fts5.make_fts5_tokenizer(CustomTokenize())
+        return self._sqlite_tokenize
+
+    def as_pg_tokenize(self):
+        if self._pg_tokenize is None:
+            def tokenize(text: str) -> str:
+                res = {}
+                for t,s,e in self.cut_words(text):
+                    if t not in res:
+                        res[t] = f"'{t}':{s+1}"
+                    else:
+                        res[t] = res[t] + f",{s+1}"
+                return " ".join(res.values())
+            self._pg_tokenize = tokenize
+        return self._pg_tokenize

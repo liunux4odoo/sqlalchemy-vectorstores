@@ -4,9 +4,11 @@ import openai
 from rich import print
 import sqlalchemy as sa
 from sqlalchemy_vectorstores import AsyncSqliteDatabase, AsyncSqliteVectorStore
+from sqlalchemy_vectorstores.tokenizers.jieba_tokenize import JiebaTokenize
 
 
 DB_URL = "sqlite+aiosqlite:///:memory:"
+# DB_URL = "sqlite+aiosqlite:///test.db"
 OPENAI_BASE_URL = "http://192.168.8.68:9997/v1"
 OPENAI_API_KEY = "E"
 EMBEDDING_MODEL = "bge-large-zh-v1.5"
@@ -19,8 +21,8 @@ async def embed_func(text: str) -> list[float]:
         model=EMBEDDING_MODEL,
     )).data[0].embedding
 
-db = AsyncSqliteDatabase(DB_URL, echo=False)
-vs = AsyncSqliteVectorStore(db, dim=1024, embedding_func=embed_func)
+db = AsyncSqliteDatabase(DB_URL, fts_tokenizers={"jieba": JiebaTokenize()}, echo=False)
+vs = AsyncSqliteVectorStore(db, dim=1024, embedding_func=embed_func, fts_tokenize="jieba")
 
 
 query = "Alaqua Cox"

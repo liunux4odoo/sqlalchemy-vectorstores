@@ -7,51 +7,65 @@ import typing as t
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncConnection
 
-from sqlalchemy_vectorstores.databases import AsyncVectorDatabase
+from sqlalchemy_vectorstores.databases import AsyncBaseDatabase
 from sqlalchemy_vectorstores.vectorstores.utils import _select_first_to_dict
 
 
 class AsyncBaseVectorStore(abc.ABC):
     '''
     a simple vector store that support:
-        - CRUD of document tables
+        - CRUD of documents
         - search documents by vector with filters
         - search documents by bm25 with filters
     '''
     def __init__(
         self,
-        db: AsyncVectorDatabase,
+        db: AsyncBaseDatabase,
         *,
         src_table: str = "rag_src",
         doc_table: str = "rag_doc",
         fts_table: str = "rag_fts",
         vec_table: str = "rag_vec",
-        fts_tokenize: str = "porter",
-        embedding_func: t.Callable[[str], t.List[float]] | None = None,
+        words_table: str = "rag_words",
+        fts_tokenize: t.Callable[[str], str] | None = None,
+        fts_language: str = "english",
+        embedding_func: t.Callable[[str], t.List[float]] | None = None, # TODO: support batch
         dim: int | None = None,
+        clear_existed: bool = False,
     ) -> None:
         self.db = db
         self._src_table = src_table
         self._doc_table = doc_table
         self._fts_table = fts_table
         self._vec_table = vec_table
+        self._words_table = words_table
         self.fts_tokenize = fts_tokenize
+        self.fts_language = fts_language
         self.embedding_func = embedding_func
         self.dim = dim
 
-        asyncio.run(self.init_database())
+        asyncio.run(self.init_database(clear_existed=clear_existed))
 
-    async def init_database(self):
+    async def init_database(self, clear_existed: bool = False):
         '''
         create all tables
         '''
         if self.embedding_func is not None and self.dim is None:
             self.dim = len(await self.embedding_func("hello world"))
-            
+
+        if clear_existed:
+            await self.db.drop_tables(
+                self._src_table,
+                self._doc_table,
+                self._fts_table,
+                self._vec_table,
+                self._words_table
+            )
         await self.db.create_src_table(self._src_table)
         await self.db.create_doc_table(self._doc_table)
         await self.db.create_fts_table(self._fts_table, self._doc_table, self.fts_tokenize)
         await self.db.create_vec_table(self._vec_table, self._doc_table, self.dim)
+        await self.db.create_words_table(self._words_table)
 
     @property
     def src_table(self) -> sa.Table:
@@ -68,6 +82,10 @@ class AsyncBaseVectorStore(abc.ABC):
     @property
     def vec_table(self) -> sa.Table:
         return self.db.tables[self._vec_table]
+
+    @property
+    def words_table(self) -> sa.Table:
+        return self.db.tables[self._words_table]
 
     def connect(self) -> AsyncConnection:
         return self.db.connect()
@@ -105,37 +123,23 @@ class AsyncBaseVectorStore(abc.ABC):
                     return id
         return await self.add_source(**data)
 
-    async def clear_source(self, id: str) -> t.Tuple[int, int]:
+    async def clear_source(self, id: str) -> t.Tuple[int, int, int]:
         '''
         clear all documents and vectors of a source, keep the source record
         return the count of deleted documents/vectors
         '''
-        async with self.connect() as con:
-            # delete documents
-            t = self.doc_table
-            doc_ids = [x["id"] for x in await self.get_documents_of_source(id)]
-            stmt = sa.delete(t).where(t.c.src_id==id)
-            res1 = await con.execute(stmt)
-
-            # delete vectors
-            t = self.vec_table
-            stmt = sa.delete(t).where(t.c.doc_id.in_(doc_ids))
-            res2 = await con.execute(stmt)
-
-            await con.commit()
-            return res1.rowcount, res2.rowcount
+        doc_ids = [x["id"] for x in (await self.get_documents_of_source(id))]
+        doc_count = await self.db.delete_by_ids(self.doc_table, doc_ids)
+        vec_count = await self.db.delete_by_ids(self.vec_table, doc_ids, "doc_id")
+        fts_count = await self.db.delete_by_ids(self.fts_table, doc_ids, "id")
+        return doc_count, vec_count, fts_count
 
     async def delete_source(self, id: str) -> t.Tuple[int, int, int]:
         '''
         delete source and it's documents/vectors completely
         '''
-        async with self.connect() as con:
-            # delete source
-            t = self.src_table
-            stmt = sa.delete(t).where(t.c.id==id)
-            res1 = await con.execute(stmt)
-            await con.commit()
-        return (res1.rowcount,) + (await self.clear_source(id))
+        await self.db.delete_by_ids(self.src_table, id)
+        return await self.clear_source(id)
 
     async def search_sources(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[t.Dict]:
         async with self.connect() as con:
@@ -206,19 +210,9 @@ class AsyncBaseVectorStore(abc.ABC):
         '''
         delete a document chunk and it's vectors
         '''
-        async with self.connect() as con:
-            # delete 
-            t = self.doc_table
-            stmt = sa.delete(t).where(t.c.id==id)
-            res1 = await con.execute(stmt)
-
-            # delete vectors
-            t = self.vec_table
-            stmt = sa.delete(t).where(t.c.doc_id==id)
-            res2 = await con.execute(stmt)
-
-            await con.commit()
-            return res1.rowcount, res2.rowcount
+        vec_count = await self.db.delete_by_ids(self.vec_table, id, "doc_id")
+        fts_count = await self.db.delete_by_ids(self.fts_table, id, "id")
+        return vec_count, fts_count
 
     async def search_documents(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[t.Dict]:
         async with self.connect() as con:
@@ -254,3 +248,15 @@ class AsyncBaseVectorStore(abc.ABC):
         filters: list[sa.sql._typing.ColumnExpressionArgument] = [],
     ) -> t.List[t.Dict]:
         ...
+
+    async def get_stop_words(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[str]:
+        async with self.connect() as con:
+            t = self.words_table
+            stmt = sa.select(t.c.word).where(t.c.status==0).where(*filters)
+            return [r[0] for r in (await con.execute(stmt))]
+
+    async def get_user_dict(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[dict]:
+        async with self.connect() as con:
+            t = self.words_table
+            stmt = sa.select(t.c.word, t.c.freq, t.c.tag).where(t.c.status==1).where(*filters)
+            return [r._asdict() for r in (await con.execute(stmt))]

@@ -8,7 +8,7 @@ import sqlalchemy as sa
 from sqlalchemy_utils import ScalarListType
 
 
-class VectorDatabase(abc.ABC):
+class BaseDatabase(abc.ABC):
     '''
     manage table creation and connection in database
     '''
@@ -35,10 +35,24 @@ class VectorDatabase(abc.ABC):
     def connect(self) -> sa.Connection:
         return self.engine.connect()
 
-    def drop_table(self, table_name: str):
+    def drop_tables(self, *table_names: str):
         with self.connect() as con:
-            con.execute(sa.text(f"drop table if exists {table_name}"))
+            for table_name in table_names:
+                con.execute(sa.text(f"drop table if exists {table_name}"))
+                if table := self.tables.get(table_name):
+                    self.metadata.remove(table)
             con.commit()
+
+    def delete_by_ids(self, table: str | sa.Table, ids: str | int | t.List[str | int], id_name: str = "id") -> int:
+        if isinstance(ids, (int, str)):
+            ids = [ids]
+        with self.connect() as con:
+            if isinstance(table, str):
+                table = self.tables[table]
+            c = getattr(table.c, id_name)
+            res = con.execute(sa.delete(table).where(c.in_(ids)))
+            con.commit()
+            return res.rowcount
 
     def create_src_table(self, table_name: str) -> sa.Table:
         '''
@@ -73,7 +87,6 @@ class VectorDatabase(abc.ABC):
         table.create(self.engine, checkfirst=True)
         return table
 
-
     @abc.abstractmethod
     def create_fts_table(
         self,
@@ -97,6 +110,19 @@ class VectorDatabase(abc.ABC):
         table for vector search
         '''
         ...
+
+    def create_words_table(self, table_name: str):
+        table = sa.Table(
+            table_name,
+            self.metadata,
+            sa.Column("word", sa.String(100), primary_key=True),
+            sa.Column("freq", sa.Integer),
+            sa.Column("tag", sa.String(10)),
+            sa.Column("metadata", sa.JSON),
+            sa.Column("status", sa.Integer), # null: not used; 0: stop word, 1: user dict
+        )
+        table.create(self.engine, checkfirst=True)
+        return table
 
     @abc.abstractmethod
     def make_filter(

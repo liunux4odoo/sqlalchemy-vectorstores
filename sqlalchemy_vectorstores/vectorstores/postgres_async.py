@@ -53,16 +53,15 @@ class AsyncPostgresVectorStore(AsyncBaseVectorStore):
         filters: list[sa.sql._typing.ColumnExpressionArgument] = [],
     ) -> t.List[t.Dict]:
         async with self.connect() as con:
-            # t1 = self.fts_table
+            t1 = self.fts_table
             t2 = self.doc_table
             t3 = self.src_table
             # make rank negative to compatible with sqlite fts
-            rank = (-sa.func.ts_rank(sa.func.to_tsvector(t2.c.content), sa.func.to_tsquery(query))).label("score")
+            rank = (-sa.func.ts_rank(t1.c.tsv, sa.func.to_tsquery(query))).label("score")
             stmt = (sa.select(t2, rank)
-                    # .join(t2, t1.c.id==t2.c.id)
+                    .join(t1, t1.c.id==t2.c.id)
                     .join(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
-                    # .where(sa.func.to_tsvector(t2.c.content).match(sa.func.to_tsquery(query)))
                     .order_by(rank)
                     .limit(top_k))
             docs = [x._asdict() for x in (await con.execute(stmt))]
@@ -91,9 +90,15 @@ class AsyncPostgresVectorStore(AsyncBaseVectorStore):
             type=type,
             target_id=target_id,
         )
+        # add tsvector
         async with self.connect() as con:
             t = self.fts_table
-            stmt = sa.insert(t).values(id=doc_id, content=content)
+            if callable(self.fts_tokenize):
+                tsv = self.fts_tokenize(content)
+            else:
+                stmt = f"select to_tsvector('{self.fts_language}', '{content}');"
+                tsv = (await con.execute(sa.text(stmt))).scalar()
+            stmt = sa.insert(t).values(id=doc_id, tsv=tsv)
             await con.execute(stmt)
             await con.commit()
         return doc_id

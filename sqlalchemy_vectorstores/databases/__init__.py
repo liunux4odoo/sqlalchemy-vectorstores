@@ -1,5 +1,5 @@
-from .base import VectorDatabase
-from .base_async import AsyncVectorDatabase
+from .base import BaseDatabase
+from .base_async import AsyncBaseDatabase
 from .sqlite import SqliteDatabase
 from .sqlite_async import AsyncSqliteDatabase
 from .postgres import PostgresDatabase

@@ -7,7 +7,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy import event as sa_event
 
-from .base_async import AsyncVectorDatabase
+from sqlalchemy_vectorstores.tokenizers.base import BaseTokenize
+from .base_async import AsyncBaseDatabase
 from .sa_types import SqliteVector
 
 if t.TYPE_CHECKING:
@@ -15,7 +16,7 @@ if t.TYPE_CHECKING:
     from sqlitefts import fts5
 
 
-class AsyncSqliteDatabase(AsyncVectorDatabase):
+class AsyncSqliteDatabase(AsyncBaseDatabase):
     '''
     use the sqlite database with some customizations:
         - custom sql functions
@@ -26,7 +27,7 @@ class AsyncSqliteDatabase(AsyncVectorDatabase):
         self,
         db: str | AsyncEngine,
         *,
-        fts_tokenizers: t.Dict[str, fts5.FTS5Tokenizer] = {},
+        fts_tokenizers: t.Dict[str, BaseTokenize] = {},
         custom_functions: t.Dict[str, t.Callable] = {},
         **db_kwds,
     ) -> None:
@@ -46,7 +47,7 @@ class AsyncSqliteDatabase(AsyncVectorDatabase):
             con = acon.driver_connection._conn
             # enable custom fts5 tokenizer
             for name, tokenizer in fts_tokenizers.items():
-                fts5.register_tokenizer(con, name, tokenizer)
+                fts5.register_tokenizer(con, name, tokenizer.as_sqlite_tokenize())
 
             # register custom functions
             for name, func in custom_functions.items():

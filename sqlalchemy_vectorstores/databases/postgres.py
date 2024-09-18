@@ -1,31 +1,35 @@
 from __future__ import annotations
 
+import asyncio
+import sys
 import uuid
 import typing as t
 
 import sqlalchemy as sa
 from sqlalchemy_utils import ScalarListType
 
-from .base import VectorDatabase
+from .base import BaseDatabase
 
 
-class PostgresDatabase(VectorDatabase):
+# latest psycopg fails on windows in default async loop
+if "win" in sys.platform:
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+class PostgresDatabase(BaseDatabase):
     '''
     use the postgres database to store documents, embeddings and tsvector
     '''
     def __init__(
         self,
         db: str | sa.Engine,
-        *,
-        tokenize: t.Callable | None = None,
-        language: str = "english",
         **db_kwds,
     ) -> None:
         super().__init__(db, **db_kwds)
-        self.tokenize = tokenize # TODO: custom tsvector
-        self.language = language
+        self._init_database()
 
-        with self.engine.connect() as con:
+    def _init_database(self):
+        with self.connect() as con:
             con.execute(sa.text("CREATE EXTENSION IF NOT EXISTS vector;"))
             con.commit()
 
@@ -64,12 +68,6 @@ class PostgresDatabase(VectorDatabase):
             sa.Column("metadata", JSONB, default={}),
         )
         table.create(self.engine, checkfirst=True)
-        stmt = (f"CREATE INDEX IF NOT EXISTS "
-                f"{table_name}_content_idx ON {table_name} "
-                f"USING gin (to_tsvector('{self.language}', content));")
-        with self.engine.connect() as con:
-            con.execute(sa.text(stmt))
-            con.commit()
         return table
 
     def create_fts_table(
@@ -80,7 +78,6 @@ class PostgresDatabase(VectorDatabase):
     ) -> sa.Table:
         '''
         table for full text search in postgres.
-        (it's an empty table, not used currently)
         '''
         from sqlalchemy.dialects.postgresql import TSVECTOR
 
@@ -88,7 +85,8 @@ class PostgresDatabase(VectorDatabase):
             table_name,
             self.metadata,
             sa.Column("id", sa.String(36)),
-            sa.Column("content", TSVECTOR),
+            sa.Column("tsv", TSVECTOR),
+            sa.Index(f"idx_{table_name}_tsv", "tsv", postgresql_using="gin"),
         )
         table.create(self.engine, checkfirst=True)
         return table

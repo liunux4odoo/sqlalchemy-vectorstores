@@ -6,15 +6,15 @@ import typing as t
 import sqlalchemy as sa
 from sqlalchemy import event as sa_event
 
-from .base import VectorDatabase
+from sqlalchemy_vectorstores.tokenizers.base import BaseTokenize
+from .base import BaseDatabase
 from .sa_types import SqliteVector
 
 if t.TYPE_CHECKING:
     import sqlite3
-    from sqlitefts import fts5
 
 
-class SqliteDatabase(VectorDatabase):
+class SqliteDatabase(BaseDatabase):
     '''
     use the sqlite database with some customizations:
         - custom sql functions
@@ -25,7 +25,7 @@ class SqliteDatabase(VectorDatabase):
         self,
         db: str | sa.Engine,
         *,
-        fts_tokenizers: t.Dict[str, fts5.FTS5Tokenizer] = {},
+        fts_tokenizers: t.Dict[str, BaseTokenize] = {},
         custom_functions: t.Dict[str, t.Callable] = {},
         **db_kwds,
     ) -> None:
@@ -40,7 +40,7 @@ class SqliteDatabase(VectorDatabase):
         def on_connect(con: sqlite3.Connection, con_rec):
             # enable custom fts5 tokenizer
             for name, tokenizer in fts_tokenizers.items():
-                fts5.register_tokenizer(con, name, tokenizer)
+                fts5.register_tokenizer(con, name, tokenizer.as_sqlite_tokenize())
 
             # register custom functions
             for name, func in custom_functions.items():
@@ -56,7 +56,7 @@ class SqliteDatabase(VectorDatabase):
         table for full text search in sqlite
         '''
         columns = ["id", "content"]
-        with self.engine.connect() as con:
+        with self.connect() as con:
             create_fts_sql = (
                 textwrap.dedent(
                     """
@@ -123,7 +123,7 @@ class SqliteDatabase(VectorDatabase):
         table for vector search in sqlite using sqlite-vec
         '''
         columns = ["embedding"]
-        with self.engine.connect() as con:
+        with self.connect() as con:
             create_vec_sql = (textwrap.dedent(
                 """
                     CREATE VIRTUAL TABLE IF NOT EXISTS [{vec_table_name}]

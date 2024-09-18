@@ -2,4 +2,4 @@ from .databases import SqliteDatabase, PostgresDatabase, AsyncSqliteDatabase, As
 from .vectorstores import SqliteVectorStore, PostgresVectorStore, AsyncSqliteVectorStore, AsyncPostgresVectorStore
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"

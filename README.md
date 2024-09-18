@@ -32,6 +32,7 @@ Here is an example using sync sqlite:
 ```python3
 import openai
 from sqlalchemy_vectorstores import SqliteDatabase, SqliteVectorStore
+from sqlalchemy_vectorstores.tokenizers.jieba_tokenize import JiebaTokenize
 
 
 DB_URL = "sqlite:///:memory:"
@@ -48,8 +49,8 @@ def embed_func(text: str) -> list[float]:
     ).data[0].embedding
 
 # Using sync sqlite database. you can use other 3 combinations.
-db = SqliteDatabase(DB_URL, echo=False)
-vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func)
+db = SqliteDatabase(DB_URL, fts_tokenizers={"jieba": JiebaTokenize()}, echo=False)
+vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func, fts_tokenize="jieba")
 
 
 query = "Alaqua Cox"
@@ -116,6 +117,7 @@ print(r)
 # search by bm25
 r = vs.search_by_bm25(query)
 print(r)
+
 ```
 Go [here](tests) for more examples.
 
@@ -141,8 +143,13 @@ The `*Database` classes manage database initialization such as create tables, lo
 The `*VectorStore` classes manage document CRUD and search.
 
 # Todo
-- [ ] add prebuilt sqlite fts tokenizer using jieba to support chinese bm25 search.
-- [ ] support customized tokenizer for postgres
+- [x] add prebuilt sqlite fts tokenizer using jieba to support chinese bm25 search.
+- [x] support customized tokenizer for postgres
+- [ ] add common retrievers
 
 ## Changelog
-newly released 0.1.0
+### v0.1.1:
+- use a separate table to store postgres tsvector
+- ability to customize tokenize for sqlite fts & postgres tsvector
+- add a tokenize using jieba
+- add a words table to hold stop words and user dictionary. User should load & set them to Tokenize mannualy.

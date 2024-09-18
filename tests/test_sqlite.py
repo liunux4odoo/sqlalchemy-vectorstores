@@ -1,10 +1,14 @@
+import pytest
+
 import openai
 from rich import print
 import sqlalchemy as sa
 from sqlalchemy_vectorstores import SqliteDatabase, SqliteVectorStore
+from sqlalchemy_vectorstores.tokenizers.jieba_tokenize import JiebaTokenize
 
 
 DB_URL = "sqlite:///:memory:"
+# DB_URL = "sqlite:///test.db"
 OPENAI_BASE_URL = "http://192.168.8.68:9997/v1"
 OPENAI_API_KEY = "E"
 EMBEDDING_MODEL = "bge-large-zh-v1.5"
@@ -17,8 +21,8 @@ def embed_func(text: str) -> list[float]:
         model=EMBEDDING_MODEL,
     ).data[0].embedding
 
-db = SqliteDatabase(DB_URL, echo=False)
-vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func)
+db = SqliteDatabase(DB_URL, fts_tokenizers={"jieba": JiebaTokenize()}, echo=False)
+vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func, fts_tokenize="jieba")
 
 
 query = "Alaqua Cox"
@@ -30,6 +34,7 @@ sentences1 = [
 sentences2 = [
     "Shohei Ohtani is a Japanese professional baseball pitcher and designated hitter for the Los Angeles Dodgers of Major League Baseball.",
     "Tamarindo, also commonly known as agua de tamarindo, is a non-alcoholic beverage made of tamarind, sugar, and water.",
+    "sqlalchemy-vectores 是一个通过 sqlalchemy 利用 sqlite 和 postgres 数据库实现向量检索和 BM25 全文检索功能的库。",
 ]
 
 

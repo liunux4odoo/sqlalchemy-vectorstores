@@ -6,11 +6,10 @@ import uuid
 import typing as t
 
 import sqlalchemy as sa
-from sqlalchemy import event as sa_event
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy_utils import ScalarListType
 
-from .base_async import AsyncVectorDatabase
+from .base_async import AsyncBaseDatabase
 
 
 # latest psycopg fails on windows in default async loop
@@ -18,21 +17,16 @@ if "win" in sys.platform:
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-class AsyncPostgresDatabase(AsyncVectorDatabase):
+class AsyncPostgresDatabase(AsyncBaseDatabase):
     '''
     use the postgres database to store documents, embeddings and tsvector
     '''
     def __init__(
         self,
         db: str | AsyncEngine,
-        *,
-        tokenize: t.Callable | None = None,
-        language: str = "english",
         **db_kwds,
     ) -> None:
         super().__init__(db, **db_kwds)
-        self.tokenize = tokenize # TODO: custom tsvector
-        self.language = language
         asyncio.run(self._init_database())
 
     async def _init_database(self):
@@ -82,13 +76,6 @@ class AsyncPostgresDatabase(AsyncVectorDatabase):
         )
         async with self.connect() as con:
             await con.run_sync(table.create, checkfirst=True)
-
-        stmt = (f"CREATE INDEX IF NOT EXISTS "
-                f"{table_name}_content_idx ON {table_name} "
-                f"USING gin (to_tsvector('{self.language}', content));")
-        async with self.engine.connect() as con:
-            await con.execute(sa.text(stmt))
-            await con.commit()
         return table
 
     async def create_fts_table(
@@ -99,7 +86,6 @@ class AsyncPostgresDatabase(AsyncVectorDatabase):
     ) -> sa.Table:
         '''
         table for full text search in postgres.
-        (it's an empty table, not used currently)
         '''
         from sqlalchemy.dialects.postgresql import TSVECTOR
 
@@ -107,7 +93,8 @@ class AsyncPostgresDatabase(AsyncVectorDatabase):
             table_name,
             self.metadata,
             sa.Column("id", sa.String(36)),
-            sa.Column("content", TSVECTOR),
+            sa.Column("tsv", TSVECTOR),
+            sa.Index(f"idx_{table_name}_tsv", "tsv", postgresql_using="gin"),
         )
         async with self.connect() as con:
             await con.run_sync(table.create, checkfirst=True)

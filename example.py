@@ -1,9 +1,10 @@
 import openai
 from sqlalchemy_vectorstores import SqliteDatabase, SqliteVectorStore
+from sqlalchemy_vectorstores.tokenizers.jieba_tokenize import JiebaTokenize
 
 
 DB_URL = "sqlite:///:memory:"
-OPENAI_BASE_URL = "http://192.168.8.68:9997/v1"
+OPENAI_BASE_URL = "http://192.168.8.68:9997/v1" # local xinference server
 OPENAI_API_KEY = "E"
 EMBEDDING_MODEL = "bge-large-zh-v1.5"
 
@@ -16,8 +17,8 @@ def embed_func(text: str) -> list[float]:
     ).data[0].embedding
 
 # Using sync sqlite database. you can use other 3 combinations.
-db = SqliteDatabase(DB_URL, echo=False)
-vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func)
+db = SqliteDatabase(DB_URL, fts_tokenizers={"jieba": JiebaTokenize()}, echo=False)
+vs = SqliteVectorStore(db, dim=1024, embedding_func=embed_func, fts_tokenize="jieba")
 
 
 query = "Alaqua Cox"
@@ -53,12 +54,12 @@ print(r)
 r = vs.get_sources_by_tags(tags_any=["b", "a"])
 print(r)
 
-# upsert source with id
+# upsert source with id - update
 vs.upsert_source({"id": src_id, "metadata": {"path": "path1", "added": True}})
 r = vs.get_source_by_id(src_id)
 print(r)
 
-# upsert source without id
+# upsert source without id - insert
 src_id3 = vs.upsert_source({"url": "file3.docx", "metadata": {"path": "path3", "added": True}})
 r = vs.get_source_by_id(src_id3)
 print(r)
@@ -67,7 +68,7 @@ print(r)
 print("list documents of source file")
 r = vs.get_documents_of_source(src_id3)
 
-# delete source
+# delete source and documents/tsvector/embeddings belongs to it.
 r = vs.delete_source(src_id3)
 
 # search by vector
