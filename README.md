@@ -5,6 +5,7 @@ A vectorstore supports vector & bm25 search using sqlite or postgresql as backen
 - Do document CRUD
 - Do vector search
 - Do bm25 search
+- Customize tokenize for sqlite fts & postgres tsvector easily
 - Filter results by metadata when search.
 - Filter results by source tags when search. This is similar to collection of langchain-postgres, but can filter results across different tags.
 - Use customized fts tokenize with sqlite.
