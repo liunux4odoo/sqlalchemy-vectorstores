@@ -39,6 +39,9 @@ class PostgresDatabase(BaseDatabase):
         '''
         from sqlalchemy.dialects.postgresql import JSONB
 
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -56,6 +59,9 @@ class PostgresDatabase(BaseDatabase):
         table for document chunks
         '''
         from sqlalchemy.dialects.postgresql import JSONB
+
+        if table_name in self.tables:
+            return self.tables[table_name]
 
         table = sa.Table(
             table_name,
@@ -81,6 +87,9 @@ class PostgresDatabase(BaseDatabase):
         '''
         from sqlalchemy.dialects.postgresql import TSVECTOR
 
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -103,9 +112,15 @@ class PostgresDatabase(BaseDatabase):
         '''
         from pgvector.sqlalchemy import Vector
 
-        table = sa.Table(table_name, self.metadata,
-                            sa.Column("doc_id", sa.String(36)),
-                            sa.Column("embedding", Vector(dim)))
+        if table_name in self.tables:
+            return self.tables[table_name]
+
+        table = sa.Table(
+            table_name,
+            self.metadata,
+            sa.Column("doc_id", sa.String(36)),
+            sa.Column("embedding", Vector(dim)),
+        )
         table.create(self.engine, checkfirst=True)
         return table
 

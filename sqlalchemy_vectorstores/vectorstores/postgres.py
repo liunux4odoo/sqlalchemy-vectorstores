@@ -34,9 +34,9 @@ class PostgresVectorStore(BaseVectorStore):
             t1 = self.vec_table
             t2 = self.doc_table
             t3 = self.src_table
-            stmt = (sa.select(t2, getattr(t1.c.embedding, strategy)(query).label("score"))
-                    .join(t2, t1.c.doc_id==t2.c.id)
-                    .join(t3, t2.c.src_id==t3.c.id)
+            stmt = (sa.select(getattr(t1.c.embedding, strategy)(query).label("score"), t2)
+                    .outerjoin(t2, t1.c.doc_id==t2.c.id)
+                    .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
                     .order_by("score")
                     .limit(top_k))
@@ -58,9 +58,9 @@ class PostgresVectorStore(BaseVectorStore):
             t3 = self.src_table
             # make rank negative to compatible with sqlite fts
             rank = (-sa.func.ts_rank(t1.c.tsv, sa.func.to_tsquery(query))).label("score")
-            stmt = (sa.select(t2, rank)
-                    .join(t1, t1.c.id==t2.c.id)
-                    .join(t3, t2.c.src_id==t3.c.id)
+            stmt = (sa.select(rank, t2)
+                    .outerjoin(t2, t1.c.id==t2.c.id)
+                    .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
                     .order_by(rank)
                     .limit(top_k))

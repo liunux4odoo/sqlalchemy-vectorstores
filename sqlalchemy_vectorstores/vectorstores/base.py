@@ -6,7 +6,7 @@ import typing as t
 import sqlalchemy as sa
 
 from sqlalchemy_vectorstores.databases import BaseDatabase
-from sqlalchemy_vectorstores.vectorstores.utils import _select_first_to_dict
+from sqlalchemy_vectorstores.vectorstores.utils import _select_first_to_dict, Document
 
 
 class BaseVectorStore(abc.ABC):
@@ -20,28 +20,29 @@ class BaseVectorStore(abc.ABC):
         self,
         db: BaseDatabase,
         *,
-        src_table: str = "rag_src",
-        doc_table: str = "rag_doc",
-        fts_table: str = "rag_fts",
-        vec_table: str = "rag_vec",
-        words_table: str = "rag_words",
+        src_table: str = "",
+        doc_table: str = "",
+        fts_table: str = "",
+        vec_table: str = "",
+        words_table: str = "",
+        table_prefix: str = "rag",
         fts_tokenize: t.Callable[[str], str] | None = None,
         fts_language: str = "english",
-        embedding_func: t.Callable[[str], t.List[float]] | None = None, # TODO: support batch
+        embedding_func: t.Callable[[str], t.List[float]] | t.Callable[[t.List[str]], t.List[t.List[float]]] | None = None,
         dim: int | None = None,
-        clear_existed: bool = False
+        clear_existed: bool = False,
     ) -> None:
         self.db = db
-        self._src_table = src_table
-        self._doc_table = doc_table
-        self._fts_table = fts_table
-        self._vec_table = vec_table
-        self._words_table = words_table
+        self._src_table = src_table or f"{table_prefix}_src"
+        self._doc_table = doc_table or f"{table_prefix}_doc"
+        self._fts_table = fts_table or f"{table_prefix}_fts"
+        self._vec_table = vec_table or f"{table_prefix}_vec"
+        self._words_table = words_table or f"{table_prefix}_words"
         self.fts_tokenize = fts_tokenize
         self.fts_language = fts_language
         self.embedding_func = embedding_func
         self.dim = dim
-
+        self._con = None # TODO: optimize connection performance
         self.init_database(clear_existed=clear_existed)
 
     def init_database(self, clear_existed: bool = False):
@@ -52,18 +53,21 @@ class BaseVectorStore(abc.ABC):
             self.dim = len(self.embedding_func("hello world"))
 
         if clear_existed:
-            self.db.drop_tables(
-                self._src_table,
-                self._doc_table,
-                self._fts_table,
-                self._vec_table,
-                self._words_table
-            )
+            self.drop_all_tables()
         self.db.create_src_table(self._src_table)
         self.db.create_doc_table(self._doc_table)
         self.db.create_fts_table(self._fts_table, self._doc_table, self.fts_tokenize)
         self.db.create_vec_table(self._vec_table, self._doc_table, self.dim)
         self.db.create_words_table(self._words_table)
+
+    def drop_all_tables(self):
+        self.db.drop_tables(
+            self._src_table,
+            self._doc_table,
+            self._fts_table,
+            self._vec_table,
+            self._words_table
+        )
 
     @property
     def src_table(self) -> sa.Table:
@@ -139,6 +143,14 @@ class BaseVectorStore(abc.ABC):
         self.db.delete_by_ids(self.src_table, id)
         return self.clear_source(id)
 
+    def delete_source_by_url(self, url: str) -> t.Tuple[int, int, int]:
+        filters = [
+            self.db.make_filter(self.src_table.c.url, url)
+        ]
+        src_ids = [x["id"] for x in self.search_sources(filters)]
+        for src_id in src_ids:
+            self.delete_source(src_id)
+
     def search_sources(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[t.Dict]:
         with self.connect() as con:
             stmt = self.src_table.select().where(*filters)
@@ -204,27 +216,34 @@ class BaseVectorStore(abc.ABC):
                     return id
         return self.add_document(**data)
 
-    def delete_document(self, id: str) -> t.Tuple[int, int]:
+    def delete_documents(self, ids: t.List[str]) -> t.Tuple[int, int, int]:
         '''
         delete a document chunk and it's vectors
         '''
-        vec_count = self.db.delete_by_ids(self.vec_table, id, "doc_id")
-        fts_count = self.db.delete_by_ids(self.fts_table, id, "id")
-        return vec_count, fts_count
+        doc_count = self.db.delete_by_ids(self.doc_table, ids, "id")
+        vec_count = self.db.delete_by_ids(self.vec_table, ids, "doc_id")
+        fts_count = self.db.delete_by_ids(self.fts_table, ids, "id")
+        return doc_count, vec_count, fts_count
 
     def search_documents(self, *filters: sa.sql._typing.ColumnExpressionArgument) -> t.List[t.Dict]:
+        if len(filters) == 1 and isinstance(filters[0], list):
+            filters = filters[0]
         with self.connect() as con:
             stmt = self.doc_table.select().where(*filters)
             return [x._asdict() for x in con.execute(stmt)]
 
-    def get_document_by_id(self, id: str) -> dict:
+    def get_document_by_ids(self, ids: t.List[str]) -> t.List[dict]:
         with self.connect() as con:
             t = self.doc_table
-            r = con.execute(t.select().where(t.c.id==id))
-            return _select_first_to_dict(r)
+            r = con.execute(t.select().where(t.c.id.in_(ids)))
+            return [x._asdict() for x in r]
 
     def get_documents_of_source(self, source_id: str) -> t.List[t.Dict]:
         expr = self.db.make_filter(self.doc_table.c.src_id, source_id, "id")
+        return self.search_documents(expr)
+
+    def get_documents_by_meta(self, kw: t.Dict) -> t.List[t.Dict]:
+        expr = [self.db.make_filter(self.doc_table.c.metadata, v, "dict", k) for k,v in kw.items()]
         return self.search_documents(expr)
 
     @abc.abstractmethod

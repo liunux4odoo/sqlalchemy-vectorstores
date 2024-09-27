@@ -23,9 +23,9 @@ class AsyncSqliteVectorStore(AsyncBaseVectorStore):
             t1 = self.vec_table
             t2 = self.doc_table
             t3 = self.src_table
-            stmt = (sa.select(t2, t1.c.distance.label("score"))
-                    .join(t2, t1.c.doc_id==t2.c.id)
-                    .join(t3, t2.c.src_id==t3.c.id)
+            stmt = (sa.select(t1.c.distance.label("score"), t2)
+                    .outerjoin(t2, t1.c.doc_id==t2.c.id)
+                    .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
                     .where(t1.c.embedding.match(query), sa.text(f"k={top_k}")))
             docs = [x._asdict() for x in (await con.execute(stmt))]
@@ -44,9 +44,9 @@ class AsyncSqliteVectorStore(AsyncBaseVectorStore):
             t1 = self.fts_table
             t2 = self.doc_table
             t3 = self.src_table
-            stmt = (sa.select(t2, t1.c.rank.label("score"))
-                    .join(t1, t1.c.id==t2.c.id)
-                    .join(t3, t2.c.src_id==t3.c.id)
+            stmt = (sa.select(t1.c.rank.label("score"), t2)
+                    .outerjoin(t2, t1.c.id==t2.c.id)
+                    .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
                     .where(t1.c.content.match(query))
                     .limit(top_k))

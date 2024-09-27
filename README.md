@@ -148,8 +148,12 @@ The `*VectorStore` classes manage document CRUD and search.
 - [ ] add common retrievers
 
 ## Changelog
-### v0.1.1:
-- use a separate table to store postgres tsvector
-- ability to customize tokenize for sqlite fts & postgres tsvector
-- add a tokenize using jieba
-- add a words table to hold stop words and user dictionary. User should load & set them to Tokenize mannualy.
+### v0.1.2:
+- feature:
+  - Allow specify table names with a prefix in VectorStore
+  - Add helper methods to drop all tables
+  - Add helper methods to delete all documents by url
+  - Add helper methods to read documents by metadata
+- fix:
+  - Avoid duplicate definitions of sqlalchemy.Table
+  - Join tables correctly when source table empty

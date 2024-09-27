@@ -55,6 +55,9 @@ class SqliteDatabase(BaseDatabase):
         '''
         table for full text search in sqlite
         '''
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         columns = ["id", "content"]
         with self.connect() as con:
             create_fts_sql = (
@@ -122,6 +125,9 @@ class SqliteDatabase(BaseDatabase):
         '''
         table for vector search in sqlite using sqlite-vec
         '''
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         columns = ["embedding"]
         with self.connect() as con:
             create_vec_sql = (textwrap.dedent(
@@ -172,10 +178,13 @@ class SqliteDatabase(BaseDatabase):
             #     con.execute(sa.text(trigger + "END;"))
 
             # self.metadata.reflect(self.engine, only=[table_name])
-            table = sa.Table(table_name, self.metadata,
-                             sa.Column("doc_id", sa.String(36)),
-                             sa.Column("embedding", SqliteVector(dim)),
-                             sa.Column("distance", sa.Float))
+            table = sa.Table(
+                table_name,
+                self.metadata,
+                sa.Column("doc_id", sa.String(36)),
+                sa.Column("embedding", SqliteVector(dim)),
+                sa.Column("distance", sa.Float),
+            )
             return table
 
     def make_filter(
@@ -201,6 +210,8 @@ class SqliteDatabase(BaseDatabase):
             sa.sql._typing.ColumnExpressionArgument
         """
         if type == "dict":
+            if not json_path.startswith("$."):
+                json_path = "$." + json_path
             if isinstance(value, str):
                 return (sa.func.json_extract(column, json_path).ilike(value))
             else:

@@ -39,7 +39,8 @@ class BaseDatabase(abc.ABC):
         with self.connect() as con:
             for table_name in table_names:
                 con.execute(sa.text(f"drop table if exists {table_name}"))
-                if table := self.tables.get(table_name):
+                table = self.tables.get(table_name)
+                if table is not None:
                     self.metadata.remove(table)
             con.commit()
 
@@ -58,6 +59,9 @@ class BaseDatabase(abc.ABC):
         '''
         table for document source
         '''
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -74,6 +78,9 @@ class BaseDatabase(abc.ABC):
         '''
         table for document chunks
         '''
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -112,6 +119,9 @@ class BaseDatabase(abc.ABC):
         ...
 
     def create_words_table(self, table_name: str):
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,

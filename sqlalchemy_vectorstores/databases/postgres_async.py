@@ -45,6 +45,9 @@ class AsyncPostgresDatabase(AsyncBaseDatabase):
         '''
         from sqlalchemy.dialects.postgresql import JSONB
 
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -63,6 +66,9 @@ class AsyncPostgresDatabase(AsyncBaseDatabase):
         table for document chunks
         '''
         from sqlalchemy.dialects.postgresql import JSONB
+
+        if table_name in self.tables:
+            return self.tables[table_name]
 
         table = sa.Table(
             table_name,
@@ -89,6 +95,9 @@ class AsyncPostgresDatabase(AsyncBaseDatabase):
         '''
         from sqlalchemy.dialects.postgresql import TSVECTOR
 
+        if table_name in self.tables:
+            return self.tables[table_name]
+
         table = sa.Table(
             table_name,
             self.metadata,
@@ -112,9 +121,15 @@ class AsyncPostgresDatabase(AsyncBaseDatabase):
         '''
         from pgvector.sqlalchemy import Vector
 
-        table = sa.Table(table_name, self.metadata,
-                            sa.Column("doc_id", sa.String(36)),
-                            sa.Column("embedding", Vector(dim)))
+        if table_name in self.tables:
+            return self.tables[table_name]
+
+        table = sa.Table(
+            table_name,
+            self.metadata,
+            sa.Column("doc_id", sa.String(36)),
+            sa.Column("embedding", Vector(dim)),
+        )
         async with self.connect() as con:
             await con.run_sync(table.create, checkfirst=True)
         return table
