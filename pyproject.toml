@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "sqlalchemy-vectorstores"
-version = "0.1.2"
+version = "0.1.3"
 description = "a vectorstore supports vector & bm25 search using sqlite or postgresql"
 authors = ["liunux4odoo <liunux@qq.com>"]
 readme = "README.md"

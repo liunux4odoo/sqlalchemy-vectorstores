@@ -44,11 +44,13 @@ class AsyncSqliteVectorStore(AsyncBaseVectorStore):
             t1 = self.fts_table
             t2 = self.doc_table
             t3 = self.src_table
-            stmt = (sa.select(t1.c.rank.label("score"), t2)
+            rank = t1.c.rank.label("score")
+            stmt = (sa.select(rank, t2)
                     .outerjoin(t2, t1.c.id==t2.c.id)
                     .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
                     .where(t1.c.content.match(query))
+                    .order_by(rank)
                     .limit(top_k))
             docs = [x._asdict() for x in (await con.execute(stmt))]
         if score_threshold is not None:

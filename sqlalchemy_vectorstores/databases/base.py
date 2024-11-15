@@ -89,6 +89,8 @@ class BaseDatabase(abc.ABC):
             sa.Column("content", sa.Text),
             sa.Column("type", sa.String(10)),
             sa.Column("target_id", sa.String(36)),
+            sa.Column("parent_id", sa.String(36)),
+            sa.Column("seq", sa.Integer),
             sa.Column("metadata", sa.JSON, default={}),
         )
         table.create(self.engine, checkfirst=True)

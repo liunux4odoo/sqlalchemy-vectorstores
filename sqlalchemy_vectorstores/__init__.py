@@ -1,5 +1,6 @@
-from .databases import SqliteDatabase, PostgresDatabase, AsyncSqliteDatabase, AsyncPostgresDatabase
-from .vectorstores import SqliteVectorStore, PostgresVectorStore, AsyncSqliteVectorStore, AsyncPostgresVectorStore
+from .databases import BaseDatabase, SqliteDatabase, PostgresDatabase, AsyncSqliteDatabase, AsyncPostgresDatabase
+from .vectorstores import BaseVectorStore, SqliteVectorStore, PostgresVectorStore, AsyncSqliteVectorStore, AsyncPostgresVectorStore
+from .vectorstores.utils import DocType
 
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"

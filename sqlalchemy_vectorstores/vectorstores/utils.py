@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import typing as t
 
 import sqlalchemy as sa
@@ -19,3 +20,12 @@ class Document(t.TypedDict):
     metadata: dict
     type: str | None
     target_id: str | None
+
+
+class DocType(str, enum.Enum):
+    ORIGIN = "origin"
+    SUMMARY = "summary"
+    QUESTION = "question"
+    ANSWER = "answer"
+    DESCRIPTION = "description"
+    OTHER = "other"
