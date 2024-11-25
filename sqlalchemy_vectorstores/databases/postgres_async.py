@@ -13,7 +13,7 @@ from .base_async import AsyncBaseDatabase
 
 
 # latest psycopg fails on windows in default async loop
-if "win" in sys.platform:
+if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
