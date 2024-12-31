@@ -27,14 +27,26 @@ class BaseTokenize(abc.ABC):
         '''
         ...
 
+    def lcut_words(self, text: str) -> list[str]:
+        return [x[0] for x in self.cut_words(text)]
+
+    @abc.abstractmethod
+    def cut_for_search(self, text: str) -> list[str]:
+        '''
+        cut sentence to words, the return value must be: (word, start_pos, end_pos)
+        '''
+        ...
+
     def as_sqlite_tokenize(self):
         if self._sqlite_tokenize is None:
             from sqlitefts import fts5
             class CustomTokenize(fts5.FTS5Tokenizer):
                 def tokenize(that, text, flags=None):
+                    # print("flags", flags)
                     for t,s,e in self.cut_words(text):
-                        s = len(text[:s].encode("utf-8"))
-                        e = s + len(t.encode("utf-8"))
+                        # s = len(text[:s].encode("utf-8"))
+                        # e = s + len(t.encode("utf-8"))
+                        # print((t,s,e))
                         yield t, s, e
             self._sqlite_tokenize = fts5.make_fts5_tokenizer(CustomTokenize())
         return self._sqlite_tokenize

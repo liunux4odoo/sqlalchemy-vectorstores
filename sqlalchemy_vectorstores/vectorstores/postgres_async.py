@@ -77,7 +77,8 @@ class AsyncPostgresVectorStore(AsyncBaseVectorStore):
         embedding: t.List[float] | None = None,
         metadata: dict = {},
         type: str | None = None,
-        target_id: str | None = None,
+        seq: int = -1,
+        target_ids: list[str] = [],
     ) -> str:
         '''
         insert a document chunk to database, generate fts & vectors automatically
@@ -88,7 +89,8 @@ class AsyncPostgresVectorStore(AsyncBaseVectorStore):
             embedding=embedding,
             metadata=metadata,
             type=type,
-            target_id=target_id,
+            seq=seq,
+            target_ids=target_ids,
         )
         # add tsvector
         async with self.connect() as con:

@@ -58,3 +58,8 @@ class JiebaTokenize(BaseTokenize):
             if skip:
                 continue
             yield word.lower(), s, e
+
+    def cut_for_search(self, text: str) -> list[str]:
+        import jieba
+
+        return [x.lower() for x in jieba.lcut_for_search(text) if x.strip()]

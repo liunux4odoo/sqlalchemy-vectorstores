@@ -181,7 +181,8 @@ class BaseVectorStore(abc.ABC):
         embedding: t.List[float] | None = None,
         metadata: dict = {},
         type: str | None = None,
-        target_id: str | None = None,
+        seq: int = -1,
+        target_ids: list[str] = [],
     ) -> str:
         '''
         insert a document chunk to database, generate fts & vectors automatically
@@ -191,7 +192,8 @@ class BaseVectorStore(abc.ABC):
             "content": content,
             "metadata": metadata,
             "type": type,
-            "target_id": target_id,
+            "seq": seq,
+            "target_ids": target_ids,
         }
         if embedding is None and self.embedding_func is not None:
             embedding = self.embedding_func(content)
@@ -199,8 +201,9 @@ class BaseVectorStore(abc.ABC):
         with self.connect() as con:
             stmt = self.doc_table.insert().values(data)
             doc_id = con.execute(stmt).inserted_primary_key[0]
-            stmt = self.vec_table.insert().values(doc_id=doc_id, embedding=embedding)
-            con.execute(stmt)
+            if embedding:
+                stmt = self.vec_table.insert().values(doc_id=doc_id, embedding=embedding)
+                con.execute(stmt)
             con.commit()
             return doc_id
 

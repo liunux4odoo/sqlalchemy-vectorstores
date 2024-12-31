@@ -5,10 +5,10 @@ A vectorstore supports vector & bm25 search using sqlite or postgresql as backen
 - Do document CRUD
 - Do vector search
 - Do bm25 search
-- Customize tokenize for sqlite fts & postgres tsvector easily
+- ~~Customize tokenize for sqlite fts & postgres tsvector easily~~
 - Filter results by metadata when search.
 - Filter results by source tags when search. This is similar to collection of langchain-postgres, but can filter results across different tags.
-- Use customized fts tokenize with sqlite.
+- Use [simple fts tokenize](https://github.com/wangfenjin/simple) with sqlite.
 - Same API to use Sqlite as embeded and using Postgres as server
 - Support sync & async methods
 - Minimal dependencies, all results are builtin List & Dict
@@ -129,7 +129,7 @@ The vectorestore stores informations in 4 tables:
 - Splitted documents are stored in document table:
   - id, content, metadata. Same to langchain Document
   - type. Other documents besides documents loaded from source file such as summary, Q/A pairs, etc.
-  - target_id. The source document which a typed document belongs to.
+  - target_ids. The source documents which a typed document refs to.
 
 - Cut Words are stored in FTS or TSVECTOR table
 - Embeddings are stored in vector table
@@ -149,7 +149,7 @@ The `*VectorStore` classes manage document CRUD and search.
 - [ ] add common retrievers
 
 ## Changelog
-### v0.1.2:
+### v0.1.4:
 - feature:
   - Allow specify table names with a prefix in VectorStore
   - Add helper methods to drop all tables

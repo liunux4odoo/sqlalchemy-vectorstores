@@ -19,7 +19,8 @@ class Document(t.TypedDict):
     content: str
     metadata: dict
     type: str | None
-    target_id: str | None
+    seq: int
+    target_ids: list[str]
 
 
 class DocType(str, enum.Enum):

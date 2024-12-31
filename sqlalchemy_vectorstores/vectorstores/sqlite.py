@@ -48,10 +48,10 @@ class SqliteVectorStore(BaseVectorStore):
                     .outerjoin(t2, t1.c.id==t2.c.id)
                     .outerjoin(t3, t2.c.src_id==t3.c.id)
                     .where(*filters)
-                    .where(t1.c.content.match(query))
+                    .where(sa.text(f"{t1.name} match :query"))
                     .order_by(rank)
                     .limit(top_k))
-            docs = [x._asdict() for x in con.execute(stmt)]
+            docs = [x._asdict() for x in con.execute(stmt, {"query": query})]
         if score_threshold is not None:
             docs = [x for x in docs if x["score"] <= score_threshold]
         return docs

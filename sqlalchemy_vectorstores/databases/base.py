@@ -87,9 +87,8 @@ class BaseDatabase(abc.ABC):
             sa.Column("id", sa.String(36), primary_key=True, default=lambda: str(uuid.uuid4()), index=True),
             sa.Column("src_id", sa.String(36)),
             sa.Column("content", sa.Text),
-            sa.Column("type", sa.String(10)),
-            sa.Column("target_id", sa.String(36)),
-            sa.Column("parent_id", sa.String(36)),
+            sa.Column("type", sa.String(20)),
+            sa.Column("target_ids", ScalarListType(), default=[]),
             sa.Column("seq", sa.Integer),
             sa.Column("metadata", sa.JSON, default={}),
         )

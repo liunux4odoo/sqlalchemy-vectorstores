@@ -70,7 +70,8 @@ class PostgresDatabase(BaseDatabase):
             sa.Column("src_id", sa.String(36)),
             sa.Column("content", sa.Text),
             sa.Column("type", sa.String(10)),
-            sa.Column("target_id", sa.String(36)),
+            sa.Column("target_ids", ScalarListType(), default=[]),
+            sa.Column("seq", sa.Integer),
             sa.Column("metadata", JSONB, default={}),
         )
         table.create(self.engine, checkfirst=True)

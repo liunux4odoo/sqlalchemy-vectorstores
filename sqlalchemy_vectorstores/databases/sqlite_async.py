@@ -9,7 +9,7 @@ from sqlalchemy import event as sa_event
 
 from sqlalchemy_vectorstores.tokenizers.base import BaseTokenize
 from .base_async import AsyncBaseDatabase
-from .sa_types import SqliteVector
+from .sa_types import SqliteVector, DATA_PATH
 
 if t.TYPE_CHECKING:
     import sqlite3
@@ -53,9 +53,10 @@ class AsyncSqliteDatabase(AsyncBaseDatabase):
             for name, func in custom_functions.items():
                 con.create_function(name, len(inspect.signature(func)), func)
 
-            # load sqlite-vec extension
+            # load extensions: sqlite-vec, simple fts
             con.enable_load_extension(True)
             sqlite_vec.load(con)
+            con.load_extension(str(DATA_PATH / "simple" / "simple"))
             con.enable_load_extension(False)
 
     async def create_fts_table(self, table_name: str, source_table: str, tokenize: str = "porter") -> sa.Table:
@@ -71,7 +72,7 @@ class AsyncSqliteDatabase(AsyncBaseDatabase):
                 textwrap.dedent(
                     """
                 CREATE VIRTUAL TABLE IF NOT EXISTS [{fts_table_name}]
-                    USING FTS5 (
+                    USING fts5 (
                     {columns},{tokenize}
                     content=[{table}]
                 )

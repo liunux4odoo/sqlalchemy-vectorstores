@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
 import typing as t
 
 import sqlalchemy as sa
+
+
+DATA_PATH = Path(__file__).parent.parent / "data"
 
 
 class SqliteVector(sa.TypeDecorator):
