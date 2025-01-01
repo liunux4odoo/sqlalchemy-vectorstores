@@ -94,7 +94,7 @@ class BaseVectorStore(abc.ABC):
 
     def add_source(
         self,
-        url: str,
+        src: str,
         *,
         tags: t.List[str] = [],
         metadata: dict = {},
@@ -103,7 +103,7 @@ class BaseVectorStore(abc.ABC):
         insert or update a document source to database
         '''
         data = {
-            "url": url,
+            "src": src,
             "tags": tags,
             "metadata": metadata,
         }
@@ -143,9 +143,9 @@ class BaseVectorStore(abc.ABC):
         self.db.delete_by_ids(self.src_table, id)
         return self.clear_source(id)
 
-    def delete_source_by_url(self, url: str) -> t.Tuple[int, int, int]:
+    def delete_source_by_src(self, src: str) -> t.Tuple[int, int, int]:
         filters = [
-            self.db.make_filter(self.src_table.c.url, url)
+            self.db.make_filter(self.src_table.c.src, src)
         ]
         src_ids = [x["id"] for x in self.search_sources(filters)]
         for src_id in src_ids:

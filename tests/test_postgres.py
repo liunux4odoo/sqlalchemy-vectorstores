@@ -34,8 +34,8 @@ sentences2 = [
 def test_create():
     # add sources
     print("add sources")
-    src_id1 = vs.add_source(url="file1.pdf", tags=["a", "b"], metadata={"path": "path1"})
-    src_id2 = vs.add_source(url="file2.txt", tags=["c", "b"], metadata={"path": "path2"})
+    src_id1 = vs.add_source(src="file1.pdf", tags=["a", "b"], metadata={"path": "path1"})
+    src_id2 = vs.add_source(src="file2.txt", tags=["c", "b"], metadata={"path": "path2"})
 
     # add documents
     print("add documents")
@@ -47,7 +47,7 @@ def test_create():
 
     # search sources by url
     print("search sources by url")
-    r = vs.search_sources(vs.db.make_filter(vs.src_table.c.url, "file1.pdf"))
+    r = vs.search_sources(vs.db.make_filter(vs.src_table.c.src, "file1.pdf"))
     print(r)
     assert isinstance(r, list) and len(r) == 1
     r = r[0]
@@ -85,11 +85,11 @@ def test_create():
 
     # upsert source without id
     print("upsert source without id")
-    src_id3 = vs.upsert_source({"url": "file3.docx", "metadata": {"path": "path3", "added": True}})
+    src_id3 = vs.upsert_source({"src": "file3.docx", "metadata": {"path": "path3", "added": True}})
     r = vs.get_source_by_id(src_id3)
     print(r)
     assert r["metadata"]["path"] == "path3"
-    assert r["url"] == "file3.docx"
+    assert r["src"] == "file3.docx"
     for s in sentences2:
         vs.add_document(src_id=src_id3, content=s)
 
@@ -118,7 +118,7 @@ def test_create():
     # search by vector with filters
     print("search by vector with filters")
     filters = [
-        vs.db.make_filter(vs.src_table.c.url, "file1.pdf")
+        vs.db.make_filter(vs.src_table.c.src, "file1.pdf")
     ]
     r = vs.search_by_vector(query, filters=filters)
     print(r)

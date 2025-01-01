@@ -65,14 +65,14 @@ sentences = [
 
 
 # add sources
-src_id = vs.add_source(url="file1.pdf", tags=["a", "b"], metadata={"path": "path1"})
+src_id = vs.add_source(src="file1.pdf", tags=["a", "b"], metadata={"path": "path1"})
 
 # add documents
 for s in sentences:
     vs.add_document(src_id=src_id, content=s)
 
-# search sources by url
-r = vs.search_sources(vs.db.make_filter(vs.src_table.c.url, "file1.pdf"))
+# search sources by src
+r = vs.search_sources(vs.db.make_filter(vs.src_table.c.src, "file1.pdf"))
 print(r)
 
 # search sources by metadata
@@ -93,7 +93,7 @@ r = vs.get_source_by_id(src_id)
 print(r)
 
 # upsert source without id - insert
-src_id3 = vs.upsert_source({"url": "file3.docx", "metadata": {"path": "path3", "added": True}})
+src_id3 = vs.upsert_source({"src": "file3.docx", "metadata": {"path": "path3", "added": True}})
 r = vs.get_source_by_id(src_id3)
 print(r)
 
@@ -110,7 +110,7 @@ print(r)
 
 # search by vector with filters
 filters = [
-    vs.db.make_filter(vs.src_table.c.url, "file1.pdf")
+    vs.db.make_filter(vs.src_table.c.src, "file1.pdf")
 ]
 r = vs.search_by_vector(query, filters=filters)
 print(r)
@@ -118,7 +118,6 @@ print(r)
 # search by bm25
 r = vs.search_by_bm25(query)
 print(r)
-
 ```
 Go [here](tests) for more examples.
 
