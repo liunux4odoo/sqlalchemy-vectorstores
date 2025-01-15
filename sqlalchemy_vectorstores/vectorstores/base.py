@@ -96,6 +96,7 @@ class BaseVectorStore(abc.ABC):
         self,
         src: str,
         *,
+        title: str = "",
         tags: t.List[str] = [],
         metadata: dict = {},
     ) -> str:
@@ -104,6 +105,7 @@ class BaseVectorStore(abc.ABC):
         '''
         data = {
             "src": src,
+            "title": title,
             "tags": tags,
             "metadata": metadata,
         }

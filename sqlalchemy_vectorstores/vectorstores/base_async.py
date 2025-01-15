@@ -98,6 +98,7 @@ class AsyncBaseVectorStore(abc.ABC):
         self,
         src: str,
         *,
+        title: str = "",
         tags: t.List[str] = [],
         metadata: dict = {},
     ) -> str:
@@ -106,6 +107,7 @@ class AsyncBaseVectorStore(abc.ABC):
         '''
         data = {
             "src": src,
+            "title": title,
             "tags": tags,
             "metadata": metadata,
         }
